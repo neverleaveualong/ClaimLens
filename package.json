@@ -15,5 +15,8 @@
   "engines": {
     "node": ">=22",
     "npm": ">=10"
+  },
+  "optionalDependencies": {
+    "lightningcss-linux-x64-gnu": "^1.32.0"
   }
 }
