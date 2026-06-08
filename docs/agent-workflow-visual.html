@@ -1,0 +1,738 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ClaimLens AI Agent Workflow</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --panel: #ffffff;
+      --ink: #172033;
+      --muted: #667085;
+      --line: #d8dee8;
+      --blue: #2563eb;
+      --green: #059669;
+      --amber: #d97706;
+      --red: #dc2626;
+      --slate: #475569;
+      --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Arial, "Noto Sans KR", sans-serif;
+      line-height: 1.55;
+    }
+
+    .page {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 36px 24px 56px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 24px;
+      align-items: stretch;
+      margin-bottom: 24px;
+    }
+
+    .hero-main,
+    .panel,
+    .node,
+    .note {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+    }
+
+    .hero-main {
+      padding: 28px;
+      border-radius: 8px;
+    }
+
+    .eyebrow {
+      color: var(--blue);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0;
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      margin: 0 0 14px;
+      font-size: 34px;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      margin: 0 0 16px;
+      font-size: 22px;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 0 0 8px;
+      font-size: 16px;
+      letter-spacing: 0;
+    }
+
+    p {
+      margin: 0;
+    }
+
+    .lead {
+      color: var(--slate);
+      font-size: 16px;
+    }
+
+    .hero-side {
+      display: grid;
+      gap: 12px;
+    }
+
+    .metric {
+      padding: 18px;
+      border-radius: 8px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 22px;
+      margin-bottom: 6px;
+    }
+
+    .metric span {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .section {
+      margin-top: 28px;
+    }
+
+    .panel {
+      border-radius: 8px;
+      padding: 22px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(150px, 1fr));
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    .node {
+      position: relative;
+      min-height: 128px;
+      padding: 16px;
+      border-radius: 8px;
+    }
+
+    .node::after {
+      content: "→";
+      position: absolute;
+      top: 50%;
+      right: -16px;
+      transform: translateY(-50%);
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .node:last-child::after {
+      display: none;
+    }
+
+    .tag {
+      display: inline-block;
+      margin-bottom: 10px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .tag.blue { background: var(--blue); }
+    .tag.green { background: var(--green); }
+    .tag.amber { background: var(--amber); }
+    .tag.red { background: var(--red); }
+    .tag.slate { background: var(--slate); }
+
+    .node p,
+    .note p,
+    li {
+      color: var(--slate);
+      font-size: 14px;
+    }
+
+    ul {
+      margin: 10px 0 0;
+      padding-left: 18px;
+    }
+
+    .decision-map {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .note {
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: none;
+    }
+
+    .note strong {
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 780px;
+    }
+
+    th,
+    td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+      font-size: 14px;
+    }
+
+    th {
+      background: #eef2f7;
+      color: #253047;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    code {
+      padding: 2px 5px;
+      border-radius: 4px;
+      background: #eef2f7;
+      color: #1f2937;
+      font-family: Consolas, monospace;
+      font-size: 13px;
+    }
+
+    .callout {
+      border-left: 4px solid var(--blue);
+      background: #eff6ff;
+      padding: 16px;
+      border-radius: 6px;
+      color: #1e3a8a;
+    }
+
+    .agent-map {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+
+    .supervisor {
+      border: 2px solid var(--blue);
+      background: #eff6ff;
+      border-radius: 8px;
+      padding: 20px;
+    }
+
+    .agent-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+    }
+
+    .agent-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 16px;
+      min-height: 150px;
+      box-shadow: var(--shadow);
+    }
+
+    .agent-card h3 {
+      color: #1f2937;
+    }
+
+    .rule-list {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-top: 16px;
+    }
+
+    .rule {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 14px;
+    }
+
+    @media (max-width: 980px) {
+      .hero,
+      .grid-2,
+      .decision-map {
+        grid-template-columns: 1fr;
+      }
+
+      .grid-3,
+      .flow,
+      .agent-grid,
+      .rule-list {
+        grid-template-columns: 1fr;
+      }
+
+      .node::after {
+        content: "↓";
+        top: auto;
+        right: 50%;
+        bottom: -20px;
+        transform: translateX(50%);
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <div class="hero-main">
+        <div class="eyebrow">ClaimLens 기획 및 AI Agent Workflow 정리</div>
+        <h1>특허 초록 검색을 넘어 청구항 기반 기술 검토로 가는 Agent</h1>
+        <p class="lead">
+          ClaimLens는 제품 또는 기술 설명을 입력받아 관련 특허를 찾고, 독립항을 구성요소로 분해한 뒤
+          제품 기능과 행 단위로 비교해 claim chart와 기술 검토 초안을 만드는 프로젝트다.
+          핵심은 법률 판단이 아니라 근거가 남는 기술적 유사성 검토다.
+        </p>
+      </div>
+      <div class="hero-side">
+        <div class="metric">
+          <strong>Local DB First</strong>
+          <span>KIPRIS는 원천 데이터 공급원, 분석은 로컬 데이터 기반으로 수행</span>
+        </div>
+        <div class="metric">
+          <strong>Claim Chart First</strong>
+          <span>최종 리포트보다 청구항 구성요소별 비교표를 먼저 생성</span>
+        </div>
+        <div class="metric">
+          <strong>Supervisor Agent</strong>
+          <span>전문 Agent의 결과를 평가하고 재실행, 보강, 중단을 결정</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="section panel">
+      <h2>프로젝트를 한 문장으로 설명하면</h2>
+      <div class="callout">
+        제품 기능과 특허 청구항을 직접 비교하기 어렵다는 문제를, 검색-상세조회-청구항분해-기능매칭-검증-보고서 생성의
+        구조화된 AI Agent workflow로 해결하는 포트폴리오 프로젝트다.
+      </div>
+    </section>
+
+    <section class="section panel">
+      <h2>가장 좋은 발전 방향: V1 → V2 → V3</h2>
+      <div class="grid-3">
+        <div class="note">
+          <span class="tag slate">V1</span>
+          <h3>Structured Workflow</h3>
+          <p><code>Analyzer -> Search -> Parser -> Matcher -> Validator -> Report</code></p>
+          <ul>
+            <li>현재 설계의 기반</li>
+            <li>구현과 테스트가 쉬움</li>
+            <li>다만 면접에서는 LangGraph 파이프라인처럼 보일 수 있음</li>
+          </ul>
+        </div>
+        <div class="note">
+          <span class="tag blue">V2</span>
+          <h3>Supervisor Multi-Agent</h3>
+          <p><code>Supervisor -> Specialist Agents</code></p>
+          <ul>
+            <li>Search, Claim, Parsing, Matching, Validation, Report 역할 분리</li>
+            <li>Supervisor가 결과 품질을 보고 다음 Agent를 선택</li>
+            <li>포트폴리오 표현이 Multi-Agent Patent Analysis System으로 강해짐</li>
+          </ul>
+        </div>
+        <div class="note">
+          <span class="tag green">V3</span>
+          <h3>Reflection Loop</h3>
+          <p><code>Validate -> Reflect -> Re-plan -> Retry</code></p>
+          <ul>
+            <li>근거 부족, 파싱 실패, 후보 부족을 스스로 감지</li>
+            <li>Supervisor가 Search/Parsing/Matching Agent를 재실행</li>
+            <li>재계획, 자기검증, 실패 복구가 들어가 Agentic AI 느낌이 강해짐</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="section panel">
+      <h2>보강된 기획: Supervisor + Specialist Agents</h2>
+      <div class="agent-map">
+        <div class="supervisor">
+          <span class="tag blue">Supervisor Agent</span>
+          <h3>전체 분석 상태를 관리하는 조정자</h3>
+          <p>
+            Supervisor Agent는 직접 모든 분석을 수행하지 않는다. 대신 제품 설명의 충분성, 검색 결과 수,
+            청구항 확보 여부, 파싱 신뢰도, 매칭 근거, 보고서의 법률 표현 위험을 확인하고 어떤 Specialist Agent를
+            다시 실행할지 결정한다. 이 구조가 ClaimLens를 단순 파이프라인이 아니라 상태 기반 멀티에이전트 시스템으로 만든다.
+          </p>
+        </div>
+        <div class="agent-grid">
+          <div class="agent-card">
+            <span class="tag green">Search Agent</span>
+            <h3>특허 후보 탐색</h3>
+            <p>검색어 생성, 로컬 DB 검색, 벡터 검색, KIPRIS 보강 필요 여부를 담당한다.</p>
+          </div>
+          <div class="agent-card">
+            <span class="tag amber">Claim Agent</span>
+            <h3>청구항 확보/선별</h3>
+            <p>상세조회 결과에서 청구항을 추출하고 삭제항 제외, 독립항 판별을 수행한다.</p>
+          </div>
+          <div class="agent-card">
+            <span class="tag slate">Parsing Agent</span>
+            <h3>구성요소 분해</h3>
+            <p>독립항을 비교 가능한 claim element로 나누고 파싱 신뢰도를 반환한다.</p>
+          </div>
+          <div class="agent-card">
+            <span class="tag blue">Matching Agent</span>
+            <h3>제품 기능 매칭</h3>
+            <p>제품 기능과 청구항 구성요소를 행 단위로 비교하고 evidence를 붙인다.</p>
+          </div>
+          <div class="agent-card">
+            <span class="tag red">Validation Agent</span>
+            <h3>근거 검증/리포트 제한</h3>
+            <p>근거 없는 matched를 차단하고 법률 침해 단정 표현을 제거한다.</p>
+          </div>
+        </div>
+      </div>
+      <div class="rule-list">
+        <div class="rule">
+          <h3>검색 결과 부족</h3>
+          <p><code>candidate_count &lt; threshold</code>이면 Supervisor가 Search Agent에 검색어 재작성 또는 KIPRIS 보강을 지시한다.</p>
+        </div>
+        <div class="rule">
+          <h3>파싱 신뢰도 낮음</h3>
+          <p><code>parser_confidence &lt; threshold</code>이면 Parsing Agent를 한 번 재실행하고, 실패 시 uncertain으로 유지한다.</p>
+        </div>
+        <div class="rule">
+          <h3>매칭 근거 부족</h3>
+          <p><code>evidence_missing</code>이면 Matching Agent를 재실행하거나 Validation Agent가 matched를 uncertain으로 낮춘다.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section panel">
+      <h2>Reflection Loop 예시</h2>
+      <div class="flow">
+        <div class="node">
+          <span class="tag red">Validation</span>
+          <h3>근거 부족 감지</h3>
+          <p>matched 결과에 제품 기능 근거가 없거나 claim element와 연결이 약함.</p>
+        </div>
+        <div class="node">
+          <span class="tag blue">Supervisor</span>
+          <h3>재계획</h3>
+          <p>현재 후보만으로는 비교가 약하다고 판단하고 Search Agent 재실행 결정.</p>
+        </div>
+        <div class="node">
+          <span class="tag green">Search</span>
+          <h3>검색 보강</h3>
+          <p>검색어를 넓히거나 KIPRIS live enrichment로 추가 후보를 확보.</p>
+        </div>
+        <div class="node">
+          <span class="tag amber">Matching</span>
+          <h3>재비교</h3>
+          <p>새 후보 또는 보강된 청구항으로 제품 기능 매칭을 다시 수행.</p>
+        </div>
+        <div class="node">
+          <span class="tag slate">Decision</span>
+          <h3>통과/다운그레이드</h3>
+          <p>근거가 충분하면 유지하고, 여전히 약하면 uncertain으로 낮춤.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>전체 데이터 흐름</h2>
+      <div class="flow">
+        <div class="node">
+          <span class="tag blue">1. Input</span>
+          <h3>제품/기술 설명</h3>
+          <p>사용자가 제품 기능, 서비스 구조, 기술 설명을 입력한다.</p>
+        </div>
+        <div class="node">
+          <span class="tag green">2. Search</span>
+          <h3>로컬 후보 검색</h3>
+          <p>저장된 초록, 메타데이터, 청구항 임베딩으로 후보 특허를 찾는다.</p>
+        </div>
+        <div class="node">
+          <span class="tag amber">3. Enrich</span>
+          <h3>KIPRIS 보강</h3>
+          <p>청구항이 없거나 후보가 부족할 때만 KIPRIS 상세조회를 호출한다.</p>
+        </div>
+        <div class="node">
+          <span class="tag slate">4. Compare</span>
+          <h3>청구항 비교</h3>
+          <p>독립항을 구성요소로 나누고 제품 기능과 행 단위로 비교한다.</p>
+        </div>
+        <div class="node">
+          <span class="tag red">5. Report</span>
+          <h3>검토 초안</h3>
+          <p>claim chart를 기반으로 기술적 위험과 불확실성을 요약한다.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section grid-2">
+      <div class="panel">
+        <h2>KIPRIS 호출 정책</h2>
+        <ul>
+          <li><code>getAdvancedSearch</code>: 키워드 검색으로 후보와 출원번호 확보</li>
+          <li><code>getBibliographyDetailInfoSearch</code>: 출원번호 기반 상세조회로 청구항 확보</li>
+          <li>10건 검색 시 최악의 경우 검색 1회 + 상세 10회로 11회 호출 가능</li>
+          <li>월 1,000회 제한 때문에 매 분석마다 live fetch하면 안 됨</li>
+          <li>한 번 가져온 특허와 청구항은 DB에 저장하고 재사용해야 함</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h2>DB에 축적해야 하는 이유</h2>
+        <ul>
+          <li>외부 API 응답 속도와 장애에 분석 품질이 흔들리지 않게 함</li>
+          <li>청구항 원문, 정규화 결과, 독립항 여부를 반복 활용할 수 있음</li>
+          <li>분석 결과를 재현하고 면접에서 시스템 설계를 설명하기 쉬움</li>
+          <li>API quota를 검색/보강 단계에만 사용해 비용과 제한을 관리함</li>
+          <li>seed dataset 50-100건을 만들면 데모 안정성이 크게 올라감</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section panel">
+      <h2>Agent Workflow</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Agent</th>
+              <th>입력</th>
+              <th>담당 책임</th>
+              <th>출력</th>
+              <th>Supervisor 판단 기준</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Supervisor Agent</td>
+              <td>제품/기술 설명</td>
+              <td>전체 상태 관리, 다음 Agent 선택, 재시도/중단/fallback 결정</td>
+              <td>agent_state, decisions, retry_count</td>
+              <td>입력이 모호하면 추가 입력 요청, 충분하면 Search Agent 실행</td>
+            </tr>
+            <tr>
+              <td>Search Agent</td>
+              <td>검색어, 제품 기능</td>
+              <td>로컬 DB 키워드 검색과 벡터 검색으로 후보 특허 탐색</td>
+              <td>patent_candidates</td>
+              <td>후보 수가 부족하면 검색어 재작성 또는 KIPRIS live enrichment</td>
+            </tr>
+            <tr>
+              <td>Claim Agent</td>
+              <td>후보 특허</td>
+              <td>로컬 청구항 조회, 누락 시 KIPRIS 상세조회로 보강</td>
+              <td>claims, fetch_status</td>
+              <td>청구항이 없으면 후보 제외 또는 claim_unavailable로 표시</td>
+            </tr>
+            <tr>
+              <td>Parsing Agent</td>
+              <td>청구항 원문</td>
+              <td>삭제항 제외, 독립항 판별, 구성요소 분해</td>
+              <td>claim_elements</td>
+              <td>신뢰도가 낮으면 한 번 재시도, 실패하면 full claim을 uncertain element로 보존</td>
+            </tr>
+            <tr>
+              <td>Matching Agent</td>
+              <td>제품 기능, 구성요소</td>
+              <td>구성요소별 제품 기능 매칭과 근거 생성</td>
+              <td>claim_chart_rows</td>
+              <td>matched, partial은 evidence가 있어야 유지</td>
+            </tr>
+            <tr>
+              <td>Validation Agent</td>
+              <td>claim chart</td>
+              <td>근거 없는 matched 결과 차단, 형식 검증</td>
+              <td>validated_rows</td>
+              <td>근거가 약하면 Matching Agent 재실행 또는 uncertain으로 downgrade</td>
+            </tr>
+            <tr>
+              <td>Report Agent</td>
+              <td>검증된 claim chart</td>
+              <td>기술 검토 초안과 불확실성 요약</td>
+              <td>final_report</td>
+              <td>Validation Agent가 법률 단정 표현을 검사하고 필요 시 재작성</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>AI Agent의 자율성은 무엇인가</h2>
+      <div class="decision-map">
+        <div class="note">
+          <strong>자율적으로 하는 것</strong>
+          <p>Supervisor가 Agent별 결과를 보고 Search, Claim, Parsing, Matching, Report Agent 중 어느 역할을 다시 실행할지 결정한다.</p>
+        </div>
+        <div class="note">
+          <strong>자율적으로 하면 안 되는 것</strong>
+          <p>침해 여부를 단정하거나, 근거 없는 매칭을 만들거나, KIPRIS를 무제한 호출하거나, 청구항 없이 claim chart를 생성하지 않는다.</p>
+        </div>
+        <div class="note">
+          <strong>멀티에이전트 의미</strong>
+          <p>각 Agent는 검색, 청구항, 파싱, 매칭, 검증처럼 책임이 분리되어 있고 Supervisor가 상태와 품질 기준으로 조정한다.</p>
+        </div>
+        <div class="note">
+          <strong>SSE로 보여줄 것</strong>
+          <p>어떤 Agent가 실행됐는지, Supervisor가 왜 재실행을 결정했는지, fallback reason과 claim chart row를 실시간으로 보여준다.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section grid-3">
+      <div class="panel">
+        <h2>초록의 역할</h2>
+        <ul>
+          <li>관련 특허 후보 검색</li>
+          <li>기술 분야 파악</li>
+          <li>검색 랭킹 보조</li>
+          <li>분석 대상 선별</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h2>청구항의 역할</h2>
+        <ul>
+          <li>권리 범위의 핵심 텍스트</li>
+          <li>독립항 중심 비교</li>
+          <li>구성요소별 claim chart 생성</li>
+          <li>제품 기능과 직접 매칭</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h2>검증의 역할</h2>
+        <ul>
+          <li>근거 없는 matched 차단</li>
+          <li>삭제 청구항 제외</li>
+          <li>claimCount와 실제 item 수 차이 처리</li>
+          <li>법률 판단 표현 제거</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section panel">
+      <h2>면접에서 알아야 하는 설명 포인트</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>질문</th>
+              <th>짧은 답변</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>왜 초록만 쓰지 않나요?</td>
+              <td>초록은 후보 검색에는 좋지만 권리 범위 비교에는 부족합니다. claim chart는 청구항, 특히 독립항이 필요합니다.</td>
+            </tr>
+            <tr>
+              <td>KIPRIS를 왜 매번 호출하지 않나요?</td>
+              <td>월 호출 제한과 응답 안정성 때문에 KIPRIS는 원천 데이터 수집/보강에 쓰고, 분석은 local DB를 우선합니다.</td>
+            </tr>
+            <tr>
+              <td>이게 그냥 RAG와 다른 점은?</td>
+              <td>검색 결과를 바로 요약하지 않고 청구항 분해, 제품 기능 매칭, 검증된 claim chart를 거쳐 보고서를 만듭니다.</td>
+            </tr>
+            <tr>
+              <td>Agent가 자율적이라는 뜻은?</td>
+              <td>Supervisor Agent가 Search, Claim, Parsing, Matching, Validation Agent의 결과를 보고 재실행, 보강, 중단을 결정한다는 뜻입니다.</td>
+            </tr>
+            <tr>
+              <td>왜 멀티에이전트 구조가 맞나요?</td>
+              <td>특허 분석은 검색, 청구항 확보, 독립항 파싱, 제품 기능 매칭, 근거 검증의 책임이 명확히 나뉘기 때문에 역할 분리가 자연스럽습니다.</td>
+            </tr>
+            <tr>
+              <td>환각은 어떻게 줄이나요?</td>
+              <td>최종 답변을 바로 만들지 않고 claim chart row마다 근거를 요구하며, 근거 없는 결과는 uncertain으로 낮춥니다.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section panel">
+      <h2>구현 우선순위</h2>
+      <div class="flow">
+        <div class="node">
+          <span class="tag blue">Step 1</span>
+          <h3>KIPRIS Collector</h3>
+          <p>검색과 상세조회 응답을 normalize하고 patents, claims에 저장한다.</p>
+        </div>
+        <div class="node">
+          <span class="tag green">Step 2</span>
+          <h3>Seed Dataset</h3>
+          <p>RAG, 문서검색, OCR, AI 검색 도메인의 50-100건을 수집한다.</p>
+        </div>
+        <div class="node">
+          <span class="tag amber">Step 3</span>
+          <h3>Claim Parser</h3>
+          <p>삭제항 제외, 독립항 판별, 구성요소 분해를 안정화한다.</p>
+        </div>
+        <div class="node">
+          <span class="tag slate">Step 4</span>
+          <h3>LangGraph</h3>
+          <p>검색, 보강, 파싱, 매칭, 검증, 보고서 노드를 연결한다.</p>
+        </div>
+        <div class="node">
+          <span class="tag red">Step 5</span>
+          <h3>SSE UI</h3>
+          <p>Agent timeline, tool call, claim chart row를 실시간 표시한다.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

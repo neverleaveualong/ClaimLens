@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import router
 from app.core.config import settings
+from app.db.session import check_database_connection
 
 app = FastAPI(title="ClaimLens API", version="0.1.0")
 
@@ -20,3 +21,9 @@ app.include_router(router, prefix="/api")
 @app.get("/health")
 def health_check() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/health/db")
+def database_health_check() -> dict[str, str]:
+    check_database_connection()
+    return {"status": "ok", "database": "connected"}
