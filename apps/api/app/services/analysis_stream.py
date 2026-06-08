@@ -11,11 +11,11 @@ def encode_sse(event: AgentEvent) -> str:
 
 async def stream_analysis(request: AnalysisRequest) -> AsyncIterator[str]:
     steps = [
-        ("input_analysis", "Analyzing product description."),
-        ("patent_search", "Preparing patent search queries."),
-        ("claim_parsing", "Preparing claim element extraction."),
-        ("feature_matching", "Preparing claim-feature comparison."),
-        ("report_generation", "Preparing risk report."),
+        ("input_analysis", "제품/기술 설명을 분석하는 중입니다."),
+        ("patent_search", "특허 검색 질의를 준비하는 중입니다."),
+        ("claim_parsing", "청구항 구성요소 추출을 준비하는 중입니다."),
+        ("feature_matching", "청구항과 제품 기능 비교를 준비하는 중입니다."),
+        ("report_generation", "기술 검토 리포트를 준비하는 중입니다."),
     ]
 
     for step, message in steps:
@@ -36,10 +36,10 @@ async def stream_analysis(request: AnalysisRequest) -> AsyncIterator[str]:
         AgentEvent(
             type="claim_chart_row",
             data={
-                "claimElement": "Placeholder claim element",
-                "productFeature": "Placeholder product feature",
+                "claimElement": "청구항 구성요소 자리표시자",
+                "productFeature": "제품 기능 자리표시자",
                 "match": "needs_review",
-                "evidence": "Patent dataset pipeline is not connected yet.",
+                "evidence": "아직 특허 데이터셋 파이프라인이 연결되지 않았습니다.",
             },
         )
     )
@@ -47,7 +47,7 @@ async def stream_analysis(request: AnalysisRequest) -> AsyncIterator[str]:
         AgentEvent(
             type="final_report",
             data={
-                "markdown": "## Draft Report\n\nClaimLens backend and SSE workflow are ready for the next implementation milestone."
+                "markdown": "## 초안 리포트\n\nClaimLens 백엔드와 SSE 워크플로우는 다음 구현 단계로 넘어갈 준비가 되어 있습니다."
             },
         )
     )

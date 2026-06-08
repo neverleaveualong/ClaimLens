@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "ClaimLens",
-  description: "AI agent for patent claim analysis and risk review.",
+  description: "특허 청구항 기반 기술 검토표를 생성하는 AI Agent입니다.",
 };
 
 export default function RootLayout({
@@ -24,7 +24,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="ko"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-[#f7f7f4] text-[#1f2328]">{children}</body>

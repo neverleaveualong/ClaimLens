@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ClaimLens DB Schema Visual</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ink: "#172033",
+            muted: "#667085",
+            line: "#d8dee8"
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-slate-50 text-ink">
+  <main class="mx-auto max-w-7xl px-6 py-10">
+    <section class="mb-8 rounded-lg border border-line bg-white p-8 shadow-sm">
+      <p class="mb-3 text-sm font-bold text-blue-600">ClaimLens Database Schema</p>
+      <h1 class="mb-4 text-3xl font-bold tracking-normal">왜 이 스키마로 나누는가</h1>
+      <p class="max-w-4xl text-base leading-7 text-slate-600">
+        ClaimLens의 DB는 KIPRIS 원본을 그대로 저장하는 영역과, AI Agent가 분석을 위해 만든 가공 데이터,
+        그리고 사용자가 실행한 분석 결과를 분리한다. 핵심은 <strong class="text-slate-900">원본 보존</strong>,
+        <strong class="text-slate-900">분석 재사용</strong>, <strong class="text-slate-900">결과 추적</strong>이다.
+      </p>
+    </section>
+
+    <section class="mb-8 grid gap-4 md:grid-cols-3">
+      <div class="rounded-lg border border-blue-200 bg-blue-50 p-5">
+        <h2 class="mb-2 text-lg font-bold text-blue-900">1. KIPRIS 원본 저장</h2>
+        <p class="text-sm leading-6 text-blue-900/80">특허 기본정보와 청구항 원문을 보존한다. KIPRIS 응답과 가장 가깝다.</p>
+        <div class="mt-4 flex gap-2 text-sm font-semibold">
+          <span class="rounded-full bg-blue-600 px-3 py-1 text-white">patents</span>
+          <span class="rounded-full bg-blue-600 px-3 py-1 text-white">claims</span>
+        </div>
+      </div>
+      <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-5">
+        <h2 class="mb-2 text-lg font-bold text-emerald-900">2. AI 분석용 가공</h2>
+        <p class="text-sm leading-6 text-emerald-900/80">청구항을 구성요소로 쪼개 Agent가 비교할 수 있는 단위로 만든다.</p>
+        <div class="mt-4 flex gap-2 text-sm font-semibold">
+          <span class="rounded-full bg-emerald-600 px-3 py-1 text-white">claim_elements</span>
+        </div>
+      </div>
+      <div class="rounded-lg border border-amber-200 bg-amber-50 p-5">
+        <h2 class="mb-2 text-lg font-bold text-amber-900">3. 사용자 분석 결과</h2>
+        <p class="text-sm leading-6 text-amber-900/80">사용자 입력과 claim chart 결과를 저장해 재현 가능하게 만든다.</p>
+        <div class="mt-4 flex gap-2 text-sm font-semibold">
+          <span class="rounded-full bg-amber-600 px-3 py-1 text-white">analysis_runs</span>
+          <span class="rounded-full bg-amber-600 px-3 py-1 text-white">claim_charts</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="mb-8 rounded-lg border border-line bg-white p-6 shadow-sm">
+      <h2 class="mb-5 text-xl font-bold">전체 관계도</h2>
+      <div class="grid gap-5 lg:grid-cols-[1fr_80px_1fr_80px_1fr]">
+        <div class="rounded-lg border-2 border-blue-300 bg-blue-50 p-5">
+          <p class="mb-3 text-sm font-bold text-blue-700">KIPRIS Source Data</p>
+          <div class="space-y-4">
+            <div class="rounded-md bg-white p-4 shadow-sm">
+              <h3 class="mb-2 font-bold">patents</h3>
+              <ul class="space-y-1 text-sm text-slate-600">
+                <li>id</li>
+                <li>application_number</li>
+                <li>title</li>
+                <li>applicant_name</li>
+                <li>abstract</li>
+                <li>ipc_number</li>
+                <li>register_status</li>
+              </ul>
+            </div>
+            <div class="rounded-md bg-white p-4 shadow-sm">
+              <h3 class="mb-2 font-bold">claims</h3>
+              <ul class="space-y-1 text-sm text-slate-600">
+                <li>id</li>
+                <li>patent_id</li>
+                <li>claim_number</li>
+                <li>raw_text</li>
+                <li>normalized_text</li>
+                <li>status</li>
+                <li>is_independent</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="hidden items-center justify-center text-3xl font-bold text-slate-400 lg:flex">→</div>
+
+        <div class="rounded-lg border-2 border-emerald-300 bg-emerald-50 p-5">
+          <p class="mb-3 text-sm font-bold text-emerald-700">AI Parsed Data</p>
+          <div class="rounded-md bg-white p-4 shadow-sm">
+            <h3 class="mb-2 font-bold">claim_elements</h3>
+            <ul class="space-y-1 text-sm text-slate-600">
+              <li>id</li>
+              <li>claim_id</li>
+              <li>element_order</li>
+              <li>element_text</li>
+              <li>source_span</li>
+              <li>parser_confidence</li>
+            </ul>
+          </div>
+          <div class="mt-4 rounded-md border border-emerald-200 bg-emerald-100 p-4 text-sm leading-6 text-emerald-950">
+            청구항 1개는 여러 개의 구성요소로 분해된다. 이 데이터는 KIPRIS 원본이 아니라 ClaimLens가 분석을 위해 만든 데이터다.
+          </div>
+        </div>
+
+        <div class="hidden items-center justify-center text-3xl font-bold text-slate-400 lg:flex">→</div>
+
+        <div class="rounded-lg border-2 border-amber-300 bg-amber-50 p-5">
+          <p class="mb-3 text-sm font-bold text-amber-700">User Analysis Data</p>
+          <div class="space-y-4">
+            <div class="rounded-md bg-white p-4 shadow-sm">
+              <h3 class="mb-2 font-bold">analysis_runs</h3>
+              <ul class="space-y-1 text-sm text-slate-600">
+                <li>id</li>
+                <li>product_description</li>
+                <li>status</li>
+                <li>created_at</li>
+              </ul>
+            </div>
+            <div class="rounded-md bg-white p-4 shadow-sm">
+              <h3 class="mb-2 font-bold">claim_charts</h3>
+              <ul class="space-y-1 text-sm text-slate-600">
+                <li>id</li>
+                <li>analysis_run_id</li>
+                <li>claim_id</li>
+                <li>claim_element_id</li>
+                <li>product_feature_text</li>
+                <li>match_status</li>
+                <li>evidence</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="mb-8 grid gap-6 lg:grid-cols-2">
+      <div class="rounded-lg border border-line bg-white p-6 shadow-sm">
+        <h2 class="mb-4 text-xl font-bold">관계로 보면 이렇게 된다</h2>
+        <div class="space-y-3 text-sm">
+          <div class="flex items-center gap-3 rounded-md bg-slate-100 p-3">
+            <span class="w-36 font-bold">patents</span>
+            <span class="text-slate-500">1 : N</span>
+            <span>claims</span>
+          </div>
+          <div class="flex items-center gap-3 rounded-md bg-slate-100 p-3">
+            <span class="w-36 font-bold">claims</span>
+            <span class="text-slate-500">1 : N</span>
+            <span>claim_elements</span>
+          </div>
+          <div class="flex items-center gap-3 rounded-md bg-slate-100 p-3">
+            <span class="w-36 font-bold">analysis_runs</span>
+            <span class="text-slate-500">1 : N</span>
+            <span>claim_charts</span>
+          </div>
+          <div class="flex items-center gap-3 rounded-md bg-slate-100 p-3">
+            <span class="w-36 font-bold">claim_charts</span>
+            <span class="text-slate-500">N : 1</span>
+            <span>claim_elements</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="rounded-lg border border-line bg-white p-6 shadow-sm">
+        <h2 class="mb-4 text-xl font-bold">1대1 매핑인가?</h2>
+        <div class="space-y-4">
+          <div class="rounded-md border border-blue-200 bg-blue-50 p-4">
+            <h3 class="font-bold text-blue-900">claims까지는 거의 1대1</h3>
+            <p class="mt-1 text-sm leading-6 text-blue-900/80">KIPRIS의 claimInfo 하나가 claims row 하나가 된다. 삭제 청구항도 row로 저장하되 분석에서는 제외한다.</p>
+          </div>
+          <div class="rounded-md border border-emerald-200 bg-emerald-50 p-4">
+            <h3 class="font-bold text-emerald-900">claim_elements는 1대N</h3>
+            <p class="mt-1 text-sm leading-6 text-emerald-900/80">청구항 하나를 여러 구성요소로 쪼갠 결과다. KIPRIS 원본에는 없는 ClaimLens 가공 데이터다.</p>
+          </div>
+          <div class="rounded-md border border-amber-200 bg-amber-50 p-4">
+            <h3 class="font-bold text-amber-900">claim_charts는 분석 실행마다 생성</h3>
+            <p class="mt-1 text-sm leading-6 text-amber-900/80">같은 청구항이어도 사용자 제품 설명이 다르면 매칭 결과가 달라지므로 analysis_run별로 저장한다.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="rounded-lg border border-line bg-white p-6 shadow-sm">
+      <h2 class="mb-5 text-xl font-bold">실제 데이터가 흘러가는 예시</h2>
+      <div class="grid gap-4 lg:grid-cols-4">
+        <div class="rounded-lg bg-blue-50 p-4">
+          <p class="mb-2 text-sm font-bold text-blue-700">KIPRIS 응답</p>
+          <p class="text-sm leading-6 text-slate-700">claimInfo.claim = "1. 문서가 저장되는 데이터베이스; 사용자가 질의어를..."</p>
+        </div>
+        <div class="rounded-lg bg-blue-50 p-4">
+          <p class="mb-2 text-sm font-bold text-blue-700">claims 저장</p>
+          <p class="text-sm leading-6 text-slate-700">raw_text 보존, normalized_text 정리, is_independent=true 저장</p>
+        </div>
+        <div class="rounded-lg bg-emerald-50 p-4">
+          <p class="mb-2 text-sm font-bold text-emerald-700">claim_elements 생성</p>
+          <p class="text-sm leading-6 text-slate-700">데이터베이스, 입력수단, 키워드 추출수단, 가중치부여수단 등으로 분해</p>
+        </div>
+        <div class="rounded-lg bg-amber-50 p-4">
+          <p class="mb-2 text-sm font-bold text-amber-700">claim_charts 생성</p>
+          <p class="text-sm leading-6 text-slate-700">사용자 제품 기능과 각 구성요소를 matched, partial, not_found, uncertain으로 비교</p>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
