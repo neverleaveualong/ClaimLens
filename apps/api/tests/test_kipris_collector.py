@@ -145,6 +145,9 @@ def test_collector_stores_claim_element_source_spans() -> None:
     collector.collect_by_application_number("10-2024-0000001")
 
     elements = db.query(ClaimElement).order_by(ClaimElement.element_order).all()
+    claim = db.query(Claim).one()
+    assert claim.parser_method == "rule_based"
+    assert claim.parser_status == "parsed"
     assert [element.element_text for element in elements] == [
         "문서를 저장하는 저장수단",
         "사용자 질의를 입력받는 입력수단",
@@ -154,3 +157,5 @@ def test_collector_stores_claim_element_source_spans() -> None:
         "사용자 질의를 입력받는 입력수단",
     ]
     assert all(element.parser_confidence == 0.75 for element in elements)
+    assert all(element.parser_method == "rule_based" for element in elements)
+    assert all(element.parser_status == "parsed" for element in elements)

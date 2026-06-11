@@ -63,6 +63,8 @@ class Claim(Base):
     source_endpoint: Mapped[str] = mapped_column(String(100), nullable=False)
     source_document_type: Mapped[str] = mapped_column(String(100), nullable=False)
     parser_confidence: Mapped[float | None] = mapped_column(Float)
+    parser_method: Mapped[str | None] = mapped_column(String(50))
+    parser_status: Mapped[str | None] = mapped_column(String(50))
     last_fetched_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
@@ -90,6 +92,8 @@ class ClaimElement(Base):
     element_text: Mapped[str] = mapped_column(Text, nullable=False)
     source_span: Mapped[str | None] = mapped_column(Text)
     parser_confidence: Mapped[float | None] = mapped_column(Float)
+    parser_method: Mapped[str | None] = mapped_column(String(50))
+    parser_status: Mapped[str | None] = mapped_column(String(50))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

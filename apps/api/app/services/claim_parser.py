@@ -22,6 +22,13 @@ RULE_SINGLE_ELEMENT_CONFIDENCE = 0.55
 RULE_UNSPLIT_CONFIDENCE = 0.5
 LLM_VALIDATED_CONFIDENCE = 0.85
 CONFIDENT_RULE_SPLIT_THRESHOLD = 0.8
+PARSER_METHOD_RULE_BASED = "rule_based"
+PARSER_METHOD_LLM_ASSISTED = "llm_assisted"
+PARSER_METHOD_FALLBACK = "fallback"
+PARSER_STATUS_PARSED = "parsed"
+PARSER_STATUS_UNCERTAIN = "uncertain"
+PARSER_STATUS_SKIPPED = "skipped"
+PARSER_STATUS_FAILED = "failed"
 
 
 @dataclass(frozen=True)
@@ -29,6 +36,8 @@ class ParsedClaimElement:
     text: str
     source_span: str
     parser_confidence: float
+    parser_method: str
+    parser_status: str
 
 
 @dataclass(frozen=True)
@@ -41,6 +50,8 @@ class ParsedClaim:
     dependency_claim_numbers: list[int]
     elements: list[ParsedClaimElement]
     parser_confidence: float
+    parser_method: str
+    parser_status: str
 
 
 LLMElementParser = Callable[[str], Iterable[str | ParsedClaimElement]]
@@ -84,12 +95,22 @@ def split_claim_elements(claim_body: str) -> list[ParsedClaimElement]:
                 text=compact,
                 source_span=compact,
                 parser_confidence=RULE_UNSPLIT_CONFIDENCE,
+                parser_method=PARSER_METHOD_FALLBACK,
+                parser_status=PARSER_STATUS_UNCERTAIN,
             )
         ]
 
     confidence = RULE_SPLIT_CONFIDENCE if len(parts) > 1 else RULE_SINGLE_ELEMENT_CONFIDENCE
+    method = PARSER_METHOD_RULE_BASED if len(parts) > 1 else PARSER_METHOD_FALLBACK
+    status = PARSER_STATUS_PARSED if len(parts) > 1 else PARSER_STATUS_UNCERTAIN
     return [
-        ParsedClaimElement(text=part, source_span=part, parser_confidence=confidence)
+        ParsedClaimElement(
+            text=part,
+            source_span=part,
+            parser_confidence=confidence,
+            parser_method=method,
+            parser_status=status,
+        )
         for part in parts[:MAX_ELEMENTS_PER_CLAIM]
     ]
 
@@ -132,6 +153,8 @@ def parse_claim(
     is_independent = None if status == "deleted" else len(dependencies) == 0
     elements = _parse_elements(claim_body, status, llm_parser)
     parser_confidence = _claim_confidence(status, elements)
+    parser_method = _claim_parser_method(status, elements)
+    parser_status = _claim_parser_status(status, elements)
 
     return ParsedClaim(
         claim_number=claim_number,
@@ -142,6 +165,8 @@ def parse_claim(
         dependency_claim_numbers=dependencies,
         elements=elements,
         parser_confidence=parser_confidence,
+        parser_method=parser_method,
+        parser_status=parser_status,
     )
 
 
@@ -193,6 +218,8 @@ def _validated_llm_elements(
                 text=text,
                 source_span=source_span,
                 parser_confidence=LLM_VALIDATED_CONFIDENCE,
+                parser_method=PARSER_METHOD_LLM_ASSISTED,
+                parser_status=PARSER_STATUS_PARSED,
             )
         )
         if len(elements) >= MAX_ELEMENTS_PER_CLAIM:
@@ -207,3 +234,25 @@ def _claim_confidence(status: str, elements: list[ParsedClaimElement]) -> float:
     if not elements:
         return 0.0
     return min(element.parser_confidence for element in elements)
+
+
+def _claim_parser_method(status: str, elements: list[ParsedClaimElement]) -> str:
+    if status == "deleted":
+        return PARSER_METHOD_RULE_BASED
+    if not elements:
+        return PARSER_METHOD_FALLBACK
+
+    methods = {element.parser_method for element in elements}
+    if len(methods) == 1:
+        return methods.pop()
+    return "mixed"
+
+
+def _claim_parser_status(status: str, elements: list[ParsedClaimElement]) -> str:
+    if status == "deleted":
+        return PARSER_STATUS_SKIPPED
+    if not elements:
+        return PARSER_STATUS_FAILED
+    if any(element.parser_status == PARSER_STATUS_UNCERTAIN for element in elements):
+        return PARSER_STATUS_UNCERTAIN
+    return PARSER_STATUS_PARSED
