@@ -5,7 +5,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.clients.kipris import ClaimInfoResult, PatentSearchResult
 from app.db.base import Base
-from app.models.patent import Claim, Patent
+from app.models.patent import Claim, ClaimElement, Patent
 from app.services.kipris_collector import KiprisCollector
 
 
@@ -128,3 +128,29 @@ def test_collector_stores_claim_source_from_fallback_result() -> None:
     claim = db.query(Claim).one()
     assert claim.source_endpoint == "getBibliographyDetailInfoSearch"
     assert claim.source_document_type == "bibliography_detail"
+
+
+def test_collector_stores_claim_element_source_spans() -> None:
+    db = make_session()
+    client = FakeKiprisClient(
+        claim_results={
+            "10-2024-0000001": make_claim_result(
+                "10-2024-0000001",
+                claims=["1. 문서를 저장하는 저장수단; 사용자 질의를 입력받는 입력수단;"],
+            ),
+        }
+    )
+    collector = KiprisCollector(db=db, client=client)
+
+    collector.collect_by_application_number("10-2024-0000001")
+
+    elements = db.query(ClaimElement).order_by(ClaimElement.element_order).all()
+    assert [element.element_text for element in elements] == [
+        "문서를 저장하는 저장수단",
+        "사용자 질의를 입력받는 입력수단",
+    ]
+    assert [element.source_span for element in elements] == [
+        "문서를 저장하는 저장수단",
+        "사용자 질의를 입력받는 입력수단",
+    ]
+    assert all(element.parser_confidence == 0.95 for element in elements)
