@@ -153,4 +153,4 @@ def test_collector_stores_claim_element_source_spans() -> None:
         "문서를 저장하는 저장수단",
         "사용자 질의를 입력받는 입력수단",
     ]
-    assert all(element.parser_confidence == 0.95 for element in elements)
+    assert all(element.parser_confidence == 0.75 for element in elements)

@@ -17,6 +17,11 @@ CLAIM_ELEMENT_SPLIT_RE = re.compile(
     r";|；|(?<=단계),|(?<=수단),|(?<=모듈),|(?<=부),|(?<=포함하는),"
 )
 MAX_ELEMENTS_PER_CLAIM = 12
+RULE_SPLIT_CONFIDENCE = 0.75
+RULE_SINGLE_ELEMENT_CONFIDENCE = 0.55
+RULE_UNSPLIT_CONFIDENCE = 0.5
+LLM_VALIDATED_CONFIDENCE = 0.85
+CONFIDENT_RULE_SPLIT_THRESHOLD = 0.8
 
 
 @dataclass(frozen=True)
@@ -74,9 +79,15 @@ def split_claim_elements(claim_body: str) -> list[ParsedClaimElement]:
     raw_parts = CLAIM_ELEMENT_SPLIT_RE.split(compact)
     parts = [part.strip(" ,") for part in raw_parts if len(part.strip(" ,")) >= 4]
     if not parts:
-        return [ParsedClaimElement(text=compact, source_span=compact, parser_confidence=0.6)]
+        return [
+            ParsedClaimElement(
+                text=compact,
+                source_span=compact,
+                parser_confidence=RULE_UNSPLIT_CONFIDENCE,
+            )
+        ]
 
-    confidence = 0.95 if len(parts) > 1 else 0.7
+    confidence = RULE_SPLIT_CONFIDENCE if len(parts) > 1 else RULE_SINGLE_ELEMENT_CONFIDENCE
     return [
         ParsedClaimElement(text=part, source_span=part, parser_confidence=confidence)
         for part in parts[:MAX_ELEMENTS_PER_CLAIM]
@@ -154,7 +165,11 @@ def _parse_elements(
 
 
 def _has_confident_rule_split(elements: list[ParsedClaimElement]) -> bool:
-    return len(elements) > 1 and min(element.parser_confidence for element in elements) >= 0.8
+    return (
+        len(elements) > 1
+        and min(element.parser_confidence for element in elements)
+        >= CONFIDENT_RULE_SPLIT_THRESHOLD
+    )
 
 
 def _validated_llm_elements(
@@ -177,7 +192,7 @@ def _validated_llm_elements(
             ParsedClaimElement(
                 text=text,
                 source_span=source_span,
-                parser_confidence=0.85,
+                parser_confidence=LLM_VALIDATED_CONFIDENCE,
             )
         )
         if len(elements) >= MAX_ELEMENTS_PER_CLAIM:

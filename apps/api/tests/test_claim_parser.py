@@ -24,7 +24,7 @@ def test_parse_independent_claim_with_source_spans() -> None:
         "질의와 관련된 문서를 검색하는 검색수단",
     ]
     assert all(element.source_span in claim.normalized_text for element in claim.elements)
-    assert claim.parser_confidence == 0.95
+    assert claim.parser_confidence == 0.75
 
 
 def test_parse_deleted_claim() -> None:
@@ -96,7 +96,7 @@ def test_llm_parser_rejects_elements_without_source_span() -> None:
         ParsedClaimElement(
             text="사용자 질의에 대응하는 문서를 검색하는 검색모듈",
             source_span="사용자 질의에 대응하는 문서를 검색하는 검색모듈",
-            parser_confidence=0.7,
+            parser_confidence=0.55,
         )
     ]
 
