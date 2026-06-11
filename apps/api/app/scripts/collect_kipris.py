@@ -24,26 +24,35 @@ def main() -> None:
         collector = KiprisCollector(db=db, client=client)
         if args.keyword:
             summary = collector.collect_by_keyword(keyword=args.keyword, limit=args.limit)
-            print(f"requested={summary.requested_count} saved={summary.saved_patent_count}")
+            print(
+                f"requested={summary.requested_count} "
+                f"saved={summary.saved_patent_count} "
+                f"failed={summary.failed_patent_count}"
+            )
             for result in summary.results:
                 print(
                     f"{result.application_number} "
+                    f"status={result.fetch_status} "
                     f"claims={result.saved_claim_count} "
                     f"active={result.active_claim_count} "
                     f"deleted={result.deleted_claim_count} "
                     f"title={result.title}"
                 )
+                if result.error_message:
+                    print(f"  error={result.error_message}")
         else:
             result = collector.collect_by_application_number(args.application_number)
             print(
                 f"{result.application_number} "
+                f"status={result.fetch_status} "
                 f"claims={result.saved_claim_count} "
                 f"active={result.active_claim_count} "
                 f"deleted={result.deleted_claim_count} "
                 f"title={result.title}"
             )
+            if result.error_message:
+                print(f"error={result.error_message}")
 
 
 if __name__ == "__main__":
     main()
-

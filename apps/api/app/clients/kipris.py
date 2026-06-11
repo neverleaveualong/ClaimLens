@@ -14,7 +14,13 @@ CLAIM_INFO_URL = (
     "http://plus.kipris.or.kr/openapi/rest/"
     "patUtiModInfoSearchSevice/patentClaimInfo"
 )
+BIBLIO_DETAIL_URL = (
+    "http://plus.kipris.or.kr/kipo-api/kipi/"
+    "patUtiModInfoSearchSevice/getBibliographyDetailInfoSearch"
+)
 
+CLAIM_INFO_ENDPOINT = "patentClaimInfo"
+BIBLIO_DETAIL_ENDPOINT = "getBibliographyDetailInfoSearch"
 
 @dataclass(frozen=True)
 class PatentSearchResult:
@@ -36,6 +42,8 @@ class ClaimInfoResult:
     claims: list[str]
     result_code: str | None
     result_message: str | None
+    source_endpoint: str
+    source_document_type: str
 
 
 class KiprisClient:
@@ -82,6 +90,15 @@ class KiprisClient:
         return results
 
     def get_claims(self, application_number: str) -> ClaimInfoResult:
+        try:
+            claim_result = self.get_claims_from_claim_endpoint(application_number)
+            if claim_result.claims:
+                return claim_result
+        except Exception:
+            pass
+        return self.get_claims_from_bibliography_detail(application_number)
+
+    def get_claims_from_claim_endpoint(self, application_number: str) -> ClaimInfoResult:
         params = {
             "applicationNumber": application_number,
             "accessKey": self.api_key,
@@ -98,6 +115,29 @@ class KiprisClient:
             claims=claims,
             result_code=result_code,
             result_message=result_message,
+            source_endpoint=CLAIM_INFO_ENDPOINT,
+            source_document_type="claim_endpoint",
+        )
+
+    def get_claims_from_bibliography_detail(self, application_number: str) -> ClaimInfoResult:
+        params = {
+            "applicationNumber": application_number,
+            "ServiceKey": self.api_key,
+        }
+        root = self._get_xml(BIBLIO_DETAIL_URL, params)
+        result_code = _optional_text(root, "./header/resultCode")
+        result_message = _optional_text(root, "./header/resultMsg")
+        self._raise_if_error(root)
+
+        claim_nodes = root.findall(".//claimInfoArray/claimInfo/claim")
+        claims = [_inner_xml(node).strip() for node in claim_nodes if _inner_xml(node).strip()]
+        return ClaimInfoResult(
+            application_number=application_number,
+            claims=claims,
+            result_code=result_code,
+            result_message=result_message,
+            source_endpoint=BIBLIO_DETAIL_ENDPOINT,
+            source_document_type="bibliography_detail",
         )
 
     def _get_xml(self, url: str, params: dict[str, str]) -> ElementTree.Element:
@@ -137,4 +177,3 @@ def _inner_xml(node: ElementTree.Element) -> str:
     for child in list(node):
         parts.append(ElementTree.tostring(child, encoding="unicode"))
     return "".join(parts)
-

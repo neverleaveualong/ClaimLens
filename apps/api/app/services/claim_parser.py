@@ -13,46 +13,8 @@ DEPENDENCY_PATTERNS = (
     re.compile(r"claim\s+(\d+)", re.IGNORECASE),
 )
 
-
-@dataclass(frozen=True)
-class ParsedClaim:
-    claim_number: int
-    raw_text: str
-    normalized_text: str
-    status: str
-    is_independent: bool | None
-    dependency_claim_numbers: list[int]
-    elements: list[str]
-    parser_confidence: float
-
-
 def normalize_application_number(value: str) -> str:
     return re.sub(r"\D", "", value or "")
-
-
-def parse_claim(raw_claim: str) -> ParsedClaim | None:
-    raw_text = raw_claim.strip()
-    normalized_text = normalize_claim_text(raw_text)
-    claim_number = extract_claim_number(normalized_text)
-    if claim_number is None:
-        return None
-
-    claim_body = CLAIM_NUMBER_RE.sub("", normalized_text, count=1).strip()
-    status = "deleted" if claim_body == "삭제" else "active"
-    dependencies = extract_dependency_claim_numbers(claim_body)
-    is_independent = None if status == "deleted" else len(dependencies) == 0
-    elements = split_claim_elements(claim_body) if status == "active" else []
-
-    return ParsedClaim(
-        claim_number=claim_number,
-        raw_text=raw_text,
-        normalized_text=normalized_text,
-        status=status,
-        is_independent=is_independent,
-        dependency_claim_numbers=dependencies,
-        elements=elements,
-        parser_confidence=0.95 if status == "deleted" or elements else 0.75,
-    )
 
 
 def normalize_claim_text(raw_text: str) -> str:
@@ -84,4 +46,40 @@ def split_claim_elements(claim_body: str) -> list[str]:
     raw_parts = re.split(r";|；|(?<=단계),|(?<=수단),|(?<=모듈),", compact)
     parts = [part.strip(" ,") for part in raw_parts if len(part.strip(" ,")) >= 4]
     return parts or [compact]
+
+@dataclass(frozen=True)
+class ParsedClaim:
+    claim_number: int
+    raw_text: str
+    normalized_text: str
+    status: str
+    is_independent: bool | None
+    dependency_claim_numbers: list[int]
+    elements: list[str]
+    parser_confidence: float
+
+
+def parse_claim(raw_claim: str) -> ParsedClaim | None:
+    raw_text = raw_claim.strip()
+    normalized_text = normalize_claim_text(raw_text)
+    claim_number = extract_claim_number(normalized_text)
+    if claim_number is None:
+        return None
+
+    claim_body = CLAIM_NUMBER_RE.sub("", normalized_text, count=1).strip()
+    status = "deleted" if claim_body == "삭제" else "active"
+    dependencies = extract_dependency_claim_numbers(claim_body)
+    is_independent = None if status == "deleted" else len(dependencies) == 0
+    elements = split_claim_elements(claim_body) if status == "active" else []
+
+    return ParsedClaim(
+        claim_number=claim_number,
+        raw_text=raw_text,
+        normalized_text=normalized_text,
+        status=status,
+        is_independent=is_independent,
+        dependency_claim_numbers=dependencies,
+        elements=elements,
+        parser_confidence=0.95 if status == "deleted" or elements else 0.75,
+    )
 
