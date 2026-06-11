@@ -24,7 +24,11 @@ def test_parse_independent_claim_with_source_spans() -> None:
         "질의와 관련된 문서를 검색하는 검색수단",
     ]
     assert all(element.source_span in claim.normalized_text for element in claim.elements)
-    assert claim.parser_confidence == 0.95
+    assert claim.parser_confidence == 0.75
+    assert claim.parser_method == "rule_based"
+    assert claim.parser_status == "parsed"
+    assert all(element.parser_method == "rule_based" for element in claim.elements)
+    assert all(element.parser_status == "parsed" for element in claim.elements)
 
 
 def test_parse_deleted_claim() -> None:
@@ -36,6 +40,8 @@ def test_parse_deleted_claim() -> None:
     assert claim.is_independent is None
     assert claim.elements == []
     assert claim.parser_confidence == 0.95
+    assert claim.parser_method == "rule_based"
+    assert claim.parser_status == "skipped"
 
 
 def test_parse_dependent_claim_with_html_tags() -> None:
@@ -75,6 +81,8 @@ def test_llm_parser_is_used_when_rule_split_is_uncertain() -> None:
                 text="사용자 질의에 대응하는 문서를 검색하는 검색모듈",
                 source_span="사용자 질의에 대응하는 문서를 검색하고 검색된 문서의 우선순위를 산출하는 검색모듈",
                 parser_confidence=0.9,
+                parser_method="llm_assisted",
+                parser_status="parsed",
             )
         ],
     )
@@ -82,7 +90,11 @@ def test_llm_parser_is_used_when_rule_split_is_uncertain() -> None:
     assert claim is not None
     assert len(claim.elements) == 1
     assert claim.elements[0].parser_confidence == 0.85
+    assert claim.elements[0].parser_method == "llm_assisted"
+    assert claim.elements[0].parser_status == "parsed"
     assert claim.parser_confidence == 0.85
+    assert claim.parser_method == "llm_assisted"
+    assert claim.parser_status == "parsed"
 
 
 def test_llm_parser_rejects_elements_without_source_span() -> None:
@@ -96,9 +108,13 @@ def test_llm_parser_rejects_elements_without_source_span() -> None:
         ParsedClaimElement(
             text="사용자 질의에 대응하는 문서를 검색하는 검색모듈",
             source_span="사용자 질의에 대응하는 문서를 검색하는 검색모듈",
-            parser_confidence=0.7,
+            parser_confidence=0.55,
+            parser_method="fallback",
+            parser_status="uncertain",
         )
     ]
+    assert claim.parser_method == "fallback"
+    assert claim.parser_status == "uncertain"
 
 
 def test_normalize_application_number() -> None:

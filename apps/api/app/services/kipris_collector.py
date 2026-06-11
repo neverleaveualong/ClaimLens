@@ -224,6 +224,8 @@ class KiprisCollector:
         claim.source_endpoint = claim_result.source_endpoint
         claim.source_document_type = claim_result.source_document_type
         claim.parser_confidence = parsed_claim.parser_confidence
+        claim.parser_method = parsed_claim.parser_method
+        claim.parser_status = parsed_claim.parser_status
         claim.last_fetched_at = fetched_at
         self.db.flush()
 
@@ -243,5 +245,7 @@ class KiprisCollector:
                     element_text=element.text,
                     source_span=element.source_span,
                     parser_confidence=element.parser_confidence,
+                    parser_method=element.parser_method,
+                    parser_status=element.parser_status,
                 )
             )
