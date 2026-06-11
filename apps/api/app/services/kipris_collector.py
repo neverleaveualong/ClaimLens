@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.clients.kipris import CLAIM_INFO_URL, ClaimInfoResult, PatentSearchResult, KiprisClient
 from app.models.patent import Claim, ClaimElement, Patent
-from app.services.claim_parser import ParsedClaim, normalize_application_number, parse_claim
+from app.services.claim_parser import ParsedClaim, normalize_application_number, parse_claims
 
 
 GENERATED_TITLE_PREFIX = "KIPRIS patent "
@@ -94,12 +94,7 @@ class KiprisCollector:
         return self.client.get_claims(application_number)
 
     def _parse_claims(self, raw_claims: list[str]) -> list[ParsedClaim]:
-        parsed_claims: list[ParsedClaim] = []
-        for raw_claim in raw_claims:
-            parsed_claim = parse_claim(raw_claim)
-            if parsed_claim is not None:
-                parsed_claims.append(parsed_claim)
-        return parsed_claims
+        return parse_claims(raw_claims)
 
     def _save_claims(
         self,
@@ -241,12 +236,12 @@ class KiprisCollector:
     def _replace_claim_elements(self, claim: Claim, parsed_claim: ParsedClaim) -> None:
         self.db.query(ClaimElement).filter(ClaimElement.claim_id == claim.id).delete()
         self.db.flush()
-        for index, element_text in enumerate(parsed_claim.elements, start=1):
+        for index, element in enumerate(parsed_claim.elements, start=1):
             claim.elements.append(
                 ClaimElement(
                     element_order=index,
-                    element_text=element_text,
-                    source_span=element_text,
-                    parser_confidence=parsed_claim.parser_confidence,
+                    element_text=element.text,
+                    source_span=element.source_span,
+                    parser_confidence=element.parser_confidence,
                 )
             )
