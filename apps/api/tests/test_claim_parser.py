@@ -117,5 +117,35 @@ def test_llm_parser_rejects_elements_without_source_span() -> None:
     assert claim.parser_status == "uncertain"
 
 
+def test_rule_parser_refines_long_processor_clause_for_llm_matching() -> None:
+    claim = parse_claim(
+        "1. 인공지능을 이용한 기관 내 문서검색 개인화 및 신규문서 작성 장치에서, "
+        "데이터를 획득하는 입력 모듈;외부 장치와 상기 데이터를 송수신하는 통신 모듈;"
+        "동작의 수행을 위해 적어도 하나의 프로세스가 저장되고 사용자 입력과 데이터를 저장하는 메모리;"
+        "그래픽 이미지를 디스플레이하는 디스플레이; 및상기 프로세스에 따라 제어 방법을 수행하는 "
+        "프로세서를 포함하되, 상기 프로세서는, 사용자의 검색 기록, 문서 열람 이력, 부서 정보 및 "
+        "전자 문서를 포함하는 제 1 데이터를 입력 모듈을 통하여 획득하고, 상기 제 1 데이터를 "
+        "전처리하고, 상기 전처리된 제 1 데이터를 학습하고, 학습 결과를 이용하여 문서검색 개인화 "
+        "및 신규문서 작성 모델을 생성하고, 요청 메시지를 상기 입력 모듈을 통하여 획득하고, "
+        "상기 문서검색 개인화 및 신규문서 작성 모델을 이용하여 상기 요청 메시지에 대응하는 "
+        "문서검색 결과 및 신규문서 중 적어도 하나를 생성하고, 상기 디스플레이가 생성 결과를 "
+        "디스플레이하도록 제어하고,상기 프로세서는,BERT 기반 컨텍스트 임베딩 엔진 및 "
+        "SLM(Supervised Language Model) 구성 모듈을 포함하고,상기 BERT 기반 컨텍스트 임베딩 "
+        "엔진은,기록물의 문맥과 의미를 고려한 벡터 표현을 생성하고,상기 SLM 구성 모듈은,"
+        "상기 BERT의 출력을 입력으로 받아 상기 모델을 구축하여 지도학습을 수행하고,상기 "
+        "프로세서는,상기 신규문서를 작성할 때, 실시간 뉴스를 검색하고, 상기 신규문서 중 상기 "
+        "실시간 뉴스와 유사도가 임계값 이상인 문서를 선택하고, 상기 디스플레이가 상기 선택된 "
+        "문서를 디스플레이하도록 제어하는, 문서검색 개인화 및 신규문서 작성 장치."
+    )
+
+    assert claim is not None
+    assert len(claim.elements) > 5
+    assert max(len(element.text) for element in claim.elements) < 300
+    assert "및상기" not in [element.text[:3] for element in claim.elements]
+    assert any("제 1 데이터를 전처리" in element.text for element in claim.elements)
+    assert any("문서검색 개인화 및 신규문서 작성 모델을 생성" in element.text for element in claim.elements)
+    assert all(element.source_span in claim.normalized_text for element in claim.elements)
+
+
 def test_normalize_application_number() -> None:
     assert normalize_application_number("10-2006-0033658") == "1020060033658"
