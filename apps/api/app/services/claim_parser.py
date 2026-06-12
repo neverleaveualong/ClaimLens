@@ -23,7 +23,7 @@ CLAUSE_BOUNDARY_RE = re.compile(
     r"(?<=받아)"
 )
 LEADING_CONNECTOR_RE = re.compile(
-    r"^(?:및\s*,?\s*)?상기\s*|^및\s*,?\s*|^(?:이|가|를)\s*포함(?:되고|하고),?\s*"
+    r"^및상기\s+|^(?:및\s*,?\s*)?상기\s+|^및\s*,?\s*|^(?:이|가|를)\s*포함(?:되고|하고),?\s*"
 )
 MAX_ELEMENTS_PER_CLAIM = 24
 MAX_RULE_ELEMENT_LENGTH = 250
