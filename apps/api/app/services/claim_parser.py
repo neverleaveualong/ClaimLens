@@ -16,10 +16,21 @@ DEPENDENCY_PATTERNS = (
 CLAIM_ELEMENT_SPLIT_RE = re.compile(
     r";|；|(?<=단계),|(?<=수단),|(?<=모듈),|(?<=부),|(?<=포함하는),"
 )
-MAX_ELEMENTS_PER_CLAIM = 12
+CLAUSE_BOUNDARY_RE = re.compile(
+    r"(?<=포함하되),|(?<=포함하고),|(?<=포함하며),|(?<=제어하고),|"
+    r"(?<=획득하고),|(?<=전처리하고),|(?<=학습하고),|(?<=생성하고),|"
+    r"(?<=검색하고),|(?<=선택하고),|(?<=수행하고),|(?<=구축하여),|"
+    r"(?<=받아)"
+)
+LEADING_CONNECTOR_RE = re.compile(
+    r"^(?:및\s*,?\s*)?상기\s*|^및\s*,?\s*|^(?:이|가|를)\s*포함(?:되고|하고),?\s*"
+)
+MAX_ELEMENTS_PER_CLAIM = 24
+MAX_RULE_ELEMENT_LENGTH = 250
 RULE_SPLIT_CONFIDENCE = 0.75
 RULE_SINGLE_ELEMENT_CONFIDENCE = 0.55
 RULE_UNSPLIT_CONFIDENCE = 0.5
+RULE_LONG_ELEMENT_CONFIDENCE = 0.6
 LLM_VALIDATED_CONFIDENCE = 0.85
 CONFIDENT_RULE_SPLIT_THRESHOLD = 0.8
 PARSER_METHOD_RULE_BASED = "rule_based"
@@ -88,7 +99,7 @@ def split_claim_elements(claim_body: str) -> list[ParsedClaimElement]:
         return []
 
     raw_parts = CLAIM_ELEMENT_SPLIT_RE.split(compact)
-    parts = [part.strip(" ,") for part in raw_parts if len(part.strip(" ,")) >= 4]
+    parts = _refine_claim_element_parts(raw_parts)
     if not parts:
         return [
             ParsedClaimElement(
@@ -105,14 +116,53 @@ def split_claim_elements(claim_body: str) -> list[ParsedClaimElement]:
     status = PARSER_STATUS_PARSED if len(parts) > 1 else PARSER_STATUS_UNCERTAIN
     return [
         ParsedClaimElement(
-            text=part,
+            text=_clean_element_text(part),
             source_span=part,
-            parser_confidence=confidence,
+            parser_confidence=_element_confidence(part, confidence),
             parser_method=method,
-            parser_status=status,
+            parser_status=_element_status(part, status),
         )
         for part in parts[:MAX_ELEMENTS_PER_CLAIM]
     ]
+
+
+def _refine_claim_element_parts(raw_parts: Iterable[str]) -> list[str]:
+    parts: list[str] = []
+    for raw_part in raw_parts:
+        part = raw_part.strip(" ,")
+        if len(part) < 4:
+            continue
+        parts.extend(_split_long_part(part))
+    return [part for part in parts if len(_clean_element_text(part)) >= 4]
+
+
+def _split_long_part(part: str) -> list[str]:
+    if len(part) <= MAX_RULE_ELEMENT_LENGTH and "포함하되" not in part:
+        return [part]
+
+    refined = [candidate.strip(" ,") for candidate in CLAUSE_BOUNDARY_RE.split(part)]
+    return [candidate for candidate in refined if len(candidate) >= 4] or [part]
+
+
+def _clean_element_text(part: str) -> str:
+    text = re.sub(r"\s+", " ", part).strip(" ,")
+    previous = None
+    while previous != text:
+        previous = text
+        text = LEADING_CONNECTOR_RE.sub("", text).strip(" ,")
+    return text
+
+
+def _element_confidence(part: str, base_confidence: float) -> float:
+    if len(part) > MAX_RULE_ELEMENT_LENGTH:
+        return min(base_confidence, RULE_LONG_ELEMENT_CONFIDENCE)
+    return base_confidence
+
+
+def _element_status(part: str, base_status: str) -> str:
+    if len(part) > MAX_RULE_ELEMENT_LENGTH:
+        return PARSER_STATUS_UNCERTAIN
+    return base_status
 
 
 def parse_claims(raw_claims: Iterable[str]) -> list[ParsedClaim]:
