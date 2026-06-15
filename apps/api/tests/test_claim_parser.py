@@ -147,5 +147,18 @@ def test_rule_parser_refines_long_processor_clause_for_llm_matching() -> None:
     assert all(element.source_span in claim.normalized_text for element in claim.elements)
 
 
+def test_rule_parser_keeps_bound_modifier_word() -> None:
+    claim = parse_claim(
+        "1. 상기의 검색된 문서로부터 추출되는 키워드를 가중치 벡터로 표현하는 분석수단;"
+        "및상기 벡터를 이용하여 검색된 문서간의 유사도를 독출하는 독출수단;"
+    )
+
+    assert claim is not None
+    assert [element.text for element in claim.elements] == [
+        "상기의 검색된 문서로부터 추출되는 키워드를 가중치 벡터로 표현하는 분석수단",
+        "벡터를 이용하여 검색된 문서간의 유사도를 독출하는 독출수단",
+    ]
+
+
 def test_normalize_application_number() -> None:
     assert normalize_application_number("10-2006-0033658") == "1020060033658"
