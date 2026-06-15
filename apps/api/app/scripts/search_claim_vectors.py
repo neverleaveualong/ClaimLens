@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import argparse
 
-from app.services.vector_search import PineconeClaimVectorIndex
+from app.db.session import SessionLocal
+from app.services.vector_search import PineconeClaimVectorIndex, search_claim_candidates
 
 
 def main() -> None:
@@ -13,18 +14,24 @@ def main() -> None:
     args = parser.parse_args()
 
     vector_index = PineconeClaimVectorIndex(namespace=args.namespace)
-    results = vector_index.search(args.query, top_k=args.top_k)
-    for index, result in enumerate(results, start=1):
-        metadata = result.metadata
-        print(
-            f"{index}. score={result.score:.4f} "
-            f"type={metadata.get('text_type')} "
-            f"application={metadata.get('application_number')} "
-            f"claim={metadata.get('claim_number')} "
-            f"element={metadata.get('element_order')}"
+    with SessionLocal() as db:
+        candidates = search_claim_candidates(
+            db,
+            args.query,
+            top_k=args.top_k,
+            vector_index=vector_index,
         )
-        print(f"   title={metadata.get('title')}")
-        print(f"   text={result.text}")
+
+    for index, candidate in enumerate(candidates, start=1):
+        print(
+            f"{index}. score={candidate.score:.4f} "
+            f"type={candidate.matched_text_type} "
+            f"application={candidate.patent.application_number} "
+            f"claim={candidate.claim.claim_number if candidate.claim else '-'} "
+            f"element={candidate.matched_claim_element.element_order if candidate.matched_claim_element else '-'}"
+        )
+        print(f"   title={candidate.patent.title}")
+        print(f"   text={candidate.matched_text}")
 
 
 if __name__ == "__main__":

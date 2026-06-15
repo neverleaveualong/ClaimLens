@@ -6,9 +6,13 @@ from app.models.patent import Claim, ClaimElement, Patent
 from app.services.vector_search import (
     TEXT_TYPE_CLAIM_ELEMENT,
     TEXT_TYPE_INDEPENDENT_CLAIM,
+    TEXT_TYPE_PATENT_ABSTRACT,
     ClaimVectorDocument,
     PineconeClaimVectorIndex,
+    VectorSearchResult,
     build_claim_vector_documents,
+    resolve_vector_search_results,
+    search_claim_candidates,
 )
 
 
@@ -52,7 +56,13 @@ class FakePineconeIndex:
                     "metadata": {
                         "text": "키워드를 추출하기 위한 추출수단",
                         "text_type": TEXT_TYPE_CLAIM_ELEMENT,
+                        "patent_id": 1,
+                        "claim_id": 1,
+                        "claim_element_id": 2,
                         "application_number": "10-2024-0000001",
+                        "title": "문서검색 특허",
+                        "claim_number": 1,
+                        "element_order": 2,
                     },
                 }
             ]
@@ -190,3 +200,83 @@ def test_pinecone_claim_vector_index_search_returns_normalized_results() -> None
     assert results[0].score == 0.91
     assert results[0].text == "키워드를 추출하기 위한 추출수단"
     assert results[0].metadata["text_type"] == TEXT_TYPE_CLAIM_ELEMENT
+
+
+def test_resolve_vector_search_results_loads_postgres_source_records() -> None:
+    db = make_session()
+    seed_patent(db)
+
+    candidates = resolve_vector_search_results(
+        db,
+        [
+            VectorSearchResult(
+                id="claim_element:2",
+                score=0.91,
+                text="키워드를 추출하기 위한 추출수단",
+                metadata={
+                    "text_type": TEXT_TYPE_CLAIM_ELEMENT,
+                    "patent_id": 1,
+                    "claim_id": 1,
+                    "claim_element_id": 2,
+                },
+            )
+        ],
+    )
+
+    assert len(candidates) == 1
+    candidate = candidates[0]
+    assert candidate.patent.application_number == "10-2024-0000001"
+    assert candidate.claim is not None
+    assert candidate.claim.claim_number == 1
+    assert candidate.matched_claim_element is not None
+    assert candidate.matched_claim_element.element_order == 2
+    assert [element.element_order for element in candidate.claim_elements] == [1, 2]
+
+
+def test_resolve_vector_search_results_supports_patent_level_matches() -> None:
+    db = make_session()
+    seed_patent(db)
+
+    candidates = resolve_vector_search_results(
+        db,
+        [
+            VectorSearchResult(
+                id="patent:1:abstract",
+                score=0.82,
+                text="문서 검색과 키워드 추출에 관한 특허",
+                metadata={
+                    "text_type": TEXT_TYPE_PATENT_ABSTRACT,
+                    "patent_id": 1,
+                },
+            )
+        ],
+    )
+
+    assert len(candidates) == 1
+    assert candidates[0].patent.title == "문서검색 특허"
+    assert candidates[0].claim is None
+    assert candidates[0].matched_claim_element is None
+    assert candidates[0].claim_elements == []
+
+
+def test_search_claim_candidates_searches_vectors_and_resolves_candidates() -> None:
+    db = make_session()
+    seed_patent(db)
+    fake_index = FakePineconeIndex()
+    vector_index = PineconeClaimVectorIndex(
+        namespace="test",
+        embedding_client=FakeEmbeddingClient(),
+        pinecone_client=None,
+        index=fake_index,
+    )
+
+    candidates = search_claim_candidates(
+        db,
+        "문서에서 키워드를 추출한다",
+        top_k=3,
+        vector_index=vector_index,
+    )
+
+    assert fake_index.queries[0]["top_k"] == 3
+    assert candidates[0].matched_text_type == TEXT_TYPE_CLAIM_ELEMENT
+    assert candidates[0].patent.title == "문서검색 특허"
